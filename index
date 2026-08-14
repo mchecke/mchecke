@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Games</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  .filters { margin-bottom: 20px; }
+  .filters label { margin-right: 6px; }
+  .filters input { margin-right: 20px; }
+  ul { list-style: none; padding: 0; }
+  li { border: 1px solid #999; padding: 10px; margin-bottom: 8px; }
+  .matchup { font-weight: bold; }
+  .empty { color: #666; font-style: italic; }
+  nav { margin-bottom: 15px; }
+</style>
+</head>
+<body>
+
+<nav><a href="admin.html">Go to Admin Page</a></nav>
+
+<h1>Upcoming Games</h1>
+
+<div class="filters">
+  <label for="startDate">From:</label>
+  <input type="date" id="startDate">
+
+  <label for="endDate">To:</label>
+  <input type="date" id="endDate">
+
+  <button onclick="renderList()">Filter</button>
+  <button onclick="clearFilters()">Clear</button>
+</div>
+
+<ul id="gamesList"></ul>
+
+<script>
+const STORAGE_KEY = "games";
+
+function loadGames() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function clearFilters() {
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  renderList();
+}
+
+function renderList() {
+  const games = loadGames();
+  const list = document.getElementById("gamesList");
+  list.innerHTML = "";
+
+  const startVal = document.getElementById("startDate").value; // yyyy-mm-dd
+  const endVal = document.getElementById("endDate").value;
+
+  const start = startVal ? new Date(startVal + "T00:00:00") : null;
+  const end = endVal ? new Date(endVal + "T23:59:59") : null;
+
+  const filtered = games.filter(game => {
+    if (!game.date) return false;
+    const gameDate = new Date(game.date);
+    if (isNaN(gameDate)) return false; // unparseable date, skip
+
+    if (start && gameDate < start) return false;
+    if (end && gameDate > end) return false;
+    return true;
+  });
+
+  // sort by date ascending
+  filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<li class="empty">No games found in this date range.</li>';
+    return;
+  }
+
+  filtered.forEach(game => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div class="matchup">${game.matchup || "(No matchup entered)"}</div>
+      <div>${game.location || ""}</div>
+      <div>${game.date || ""} &mdash; ${game.time || ""}</div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+renderList();
+</script>
+
+</body>
+</html>
