@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Games</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  .filters { margin-bottom: 20px; }
+  .filters label { margin-right: 6px; }
+  .filters input { margin-right: 20px; }
+  ul { list-style: none; padding: 0; }
+  li { border: 1px solid #999; padding: 10px; margin-bottom: 8px; }
+  .matchup { font-weight: bold; }
+  .empty { color: #666; font-style: italic; }
+  nav { margin-bottom: 15px; }
+  #status { color: #666; font-style: italic; }
+</style>
+</head>
+<body>
+
+<nav><a href="admin.html">Go to Admin Page</a></nav>
+
+<h1>Upcoming Games</h1>
+<p id="status">Loading...</p>
+
+<div class="filters">
+  <label for="startDate">From:</label>
+  <input type="date" id="startDate">
+
+  <label for="endDate">To:</label>
+  <input type="date" id="endDate">
+
+  <button onclick="renderList()">Filter</button>
+  <button onclick="clearFilters()">Clear</button>
+</div>
+
+<ul id="gamesList"></ul>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ===== PASTE YOUR FIREBASE CONFIG HERE (same as admin.html) =====
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+// ===================================================================
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const gamesCol = collection(db, "games");
+
+let allGames = [];
+
+const status = document.getElementById("status");
+
+onSnapshot(gamesCol, (snapshot) => {
+  allGames = snapshot.docs.map(d => d.data());
+  status.textContent = `${allGames.length} game(s) loaded.`;
+  renderList();
+}, (err) => {
+  status.textContent = "Error connecting to database: " + err.message;
+});
+
+window.clearFilters = function() {
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  renderList();
+};
+
+window.renderList = function() {
+  const list = document.getElementById("gamesList");
+  list.innerHTML = "";
+
+  const startVal = document.getElementById("startDate").value; // yyyy-mm-dd
+  const endVal = document.getElementById("endDate").value;
+
+  const start = startVal ? new Date(startVal + "T00:00:00") : null;
+  const end = endVal ? new Date(endVal + "T23:59:59") : null;
+
+  const filtered = allGames.filter(game => {
+    if (!game.date) return false;
+    const gameDate = new Date(game.date);
+    if (isNaN(gameDate)) return false;
+
+    if (start && gameDate < start) return false;
+    if (end && gameDate > end) return false;
+    return true;
+  });
+
+  filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<li class="empty">No games found in this date range.</li>';
+    return;
+  }
+
+  filtered.forEach(game => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div class="matchup">${game.matchup || "(No matchup entered)"}</div>
+      <div>${game.location || ""}</div>
+      <div>${game.date || ""} &mdash; ${game.time || ""}</div>
+    `;
+    list.appendChild(li);
+  });
+};
+</script>
+
+</body>
+</html>
