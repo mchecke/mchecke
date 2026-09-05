@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; max-width: 800px; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+  th { background: #eee; }
+  input[type="text"] { width: 100%; box-sizing: border-box; }
+  textarea { width: 100%; max-width: 700px; height: 100px; font-family: monospace; box-sizing: border-box; }
+  .actions { margin-top: 10px; }
+  button { padding: 6px 12px; margin-right: 8px; cursor: pointer; }
+  .del-btn { color: red; cursor: pointer; }
+  nav { margin-bottom: 15px; }
+  nav a { margin-right: 15px; }
+  #status-games, #status-fantasy, #status-nfl { color: #666; font-style: italic; }
+  h2 { margin-top: 30px; }
+  h3 { margin-top: 25px; }
+  .week-picker { margin: 15px 0; }
+  .week-picker input { width: 80px; display: inline-block; }
+  .tabs { margin: 20px 0; border-bottom: 2px solid #999; }
+  .tab-btn { padding: 10px 16px; cursor: pointer; border: 1px solid #999; border-bottom: none; background: #eee; margin-right: 4px; }
+  .tab-btn.active { background: #fff; font-weight: bold; }
+  .tab-section { display: none; }
+  .tab-section.active { display: block; }
+  .paste-box { border: 1px dashed #999; padding: 10px; margin: 15px 0; max-width: 700px; }
+  .paste-box p { margin: 4px 0; font-size: 0.9em; color: #444; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Games</a>
+  <a href="fantasy.html">Fantasy Awards</a>
+  <a href="predictive-model.html">Predictive Model</a>
+  <a href="admin.html">Admin</a>
+</nav>
+
+<h1>Admin</h1>
+
+<div id="loginSection">
+  <p>Please log in to manage this site.</p>
+  <input type="email" id="loginEmail" placeholder="Email"><br><br>
+  <input type="password" id="loginPassword" placeholder="Password"><br><br>
+  <button id="loginBtn">Log In</button>
+  <p id="loginError" style="color: red;"></p>
+</div>
+
+<div id="adminSection" style="display: none;">
+  <button id="logoutBtn">Log Out</button>
+
+  <div class="tabs">
+    <span class="tab-btn active" data-tab="games">Games</span>
+    <span class="tab-btn" data-tab="fantasy">Fantasy Awards</span>
+    <span class="tab-btn" data-tab="nfl">NFL Dashboard</span>
+  </div>
+
+  <!-- ================= GAMES TAB ================= -->
+  <div id="tab-games" class="tab-section active">
+    <p id="status-games">Loading...</p>
+    <table id="gamesTable">
+      <thead>
+        <tr><th>Matchup</th><th>Location</th><th>Date</th><th>Time (EST)</th><th>Remove</th></tr>
+      </thead>
+      <tbody id="gamesBody"></tbody>
+    </table>
+    <div class="actions">
+      <button onclick="addGameRow()">+ Add Row</button>
+    </div>
+  </div>
+
+  <!-- ================= FANTASY TAB ================= -->
+  <div id="tab-fantasy" class="tab-section">
+    <p id="status-fantasy">Loading...</p>
+
+    <h3>Awards</h3>
+    <table id="awardsTable">
+      <thead>
+        <tr><th>Award</th><th>Prize</th><th>Projected Winner</th><th>Final Winner</th><th>Remove</th></tr>
+      </thead>
+      <tbody id="awardsBody"></tbody>
+    </table>
+    <div class="actions">
+      <button onclick="addAwardRow()">+ Add Award Row</button>
+    </div>
+
+    <h3>People (Roster)</h3>
+    <table id="peopleTable">
+      <thead><tr><th>Person</th><th>Remove</th></tr></thead>
+      <tbody id="peopleBody"></tbody>
+    </table>
+    <div class="actions">
+      <button onclick="addPersonRow()">+ Add Person</button>
+    </div>
+  </div>
+
+  <!-- ================= NFL TAB ================= -->
+  <div id="tab-nfl" class="tab-section">
+    <p id="status-nfl">Loading...</p>
+
+    <h3>Weekly Games</h3>
+    <div class="week-picker">
+      <label for="weekSelect">Editing Week:</label>
+      <input type="number" id="weekSelect" min="1" max="18" value="1">
+    </div>
+
+    <label for="byeTeamsInput">Teams on BYE this week (comma separated):</label><br>
+    <input type="text" id="byeTeamsInput" placeholder="e.g. Jets, Giants" style="max-width: 400px;"><br>
+
+    <div class="paste-box">
+      <strong>Paste from Excel</strong>
+      <p>In your Dashboard sheet, select the 5 columns for this week's games (Team1, Win%, Win%, Team2, Game Score) &mdash; it's fine if blank separator rows are included, they'll be ignored. Copy, then paste below.</p>
+      <textarea id="pasteGames" placeholder="Paste tab-separated rows here..."></textarea><br>
+      <button onclick="importPastedGames()">Import Pasted Games (replaces Week X's games)</button>
+      <p id="pasteGamesStatus"></p>
+    </div>
+
+    <table id="nflGamesTable">
+      <thead>
+        <tr><th>Team 1</th><th>Team 1 Win %</th><th>Team 2 Win %</th><th>Team 2</th><th>Game Score</th><th>Remove</th></tr>
+      </thead>
+      <tbody id="nflGamesBody"></tbody>
+    </table>
+    <div class="actions">
+      <button onclick="addNflGameRow()">+ Add Game to This Week</button>
+    </div>
+
+    <h3>Team Records</h3>
+    <div class="paste-box">
+      <strong>Paste from Excel</strong>
+      <p>In "Dashboard Calc", select the Team, Wins, Losses columns (A69:C100). Copy, then paste below. Matches by team name and updates existing rows.</p>
+      <textarea id="pasteTeams" placeholder="Paste tab-separated rows here..."></textarea><br>
+      <button onclick="importPastedTeams()">Import Pasted Team Records</button>
+      <p id="pasteTeamsStatus"></p>
+    </div>
+
+    <table id="teamsTable">
+      <thead><tr><th>Team</th><th>Wins</th><th>Losses</th><th>Remove</th></tr></thead>
+      <tbody id="teamsBody"></tbody>
+    </table>
+    <div class="actions">
+      <button onclick="addTeamRow()">+ Add Team</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBwT239OARx21tJl29NUXyHi5DBNLGeJjw",
+  authDomain: "game-schedule-d133d.firebaseapp.com",
+  projectId: "game-schedule-d133d",
+  storageBucket: "game-schedule-d133d.firebasestorage.app",
+  messagingSenderId: "918167764058",
+  appId: "1:918167764058:web:5bb07920321b1cfc106c63"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/"/g, "&quot;");
+}
+
+// ---------- LOGIN GATE ----------
+const loginSection = document.getElementById("loginSection");
+const adminSection = document.getElementById("adminSection");
+const loginError = document.getElementById("loginError");
+
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+  loginError.textContent = "";
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    loginError.textContent = "Login failed: " + err.message;
+  }
+});
+document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+onAuthStateChanged(auth, (user) => {
+  loginSection.style.display = user ? "none" : "block";
+  adminSection.style.display = user ? "block" : "none";
+});
+
+// ---------- TAB SWITCHING ----------
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-section").forEach(s => s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+// ================= GAMES =================
+const gamesCol = collection(db, "games");
+const gamesBody = document.getElementById("gamesBody");
+const statusGames = document.getElementById("status-games");
+
+onSnapshot(gamesCol, (snapshot) => {
+  const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  statusGames.textContent = `Connected. ${games.length} game(s) loaded.`;
+  gamesBody.innerHTML = "";
+  games.forEach((game) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(game.matchup)}" placeholder="Patriots v Seahawks" data-id="${game.id}" data-field="matchup"></td>
+      <td><input type="text" value="${escapeHtml(game.location)}" placeholder="Seattle" data-id="${game.id}" data-field="location"></td>
+      <td><input type="text" value="${escapeHtml(game.date)}" placeholder="September 7, 2026" data-id="${game.id}" data-field="date"></td>
+      <td><input type="text" value="${escapeHtml(game.time)}" placeholder="8:00 PM EST" data-id="${game.id}" data-field="time"></td>
+      <td><span class="del-btn" data-id="${game.id}">&#10060;</span></td>
+    `;
+    gamesBody.appendChild(tr);
+  });
+  gamesBody.querySelectorAll("input").forEach(input => {
+    input.addEventListener("change", async (e) => {
+      await updateDoc(doc(db, "games", e.target.getAttribute("data-id")), { [e.target.getAttribute("data-field")]: e.target.value });
+    });
+  });
+  gamesBody.querySelectorAll(".del-btn").forEach(span => {
+    span.addEventListener("click", async (e) => {
+      await deleteDoc(doc(db, "games", e.target.getAttribute("data-id")));
+    });
+  });
+}, (err) => { statusGames.textContent = "Error: " + err.message; });
+
+window.addGameRow = async function() {
+  await addDoc(gamesCol, { matchup: "", location: "", date: "", time: "" });
+};
+
+// ================= FANTASY =================
+const awardsCol = collection(db, "fantasyAwards");
+const peopleCol = collection(db, "fantasyPeople");
+const awardsBody = document.getElementById("awardsBody");
+const peopleBody = document.getElementById("peopleBody");
+const statusFantasy = document.getElementById("status-fantasy");
+
+let currentAwards = [];
+let currentPeople = [];
+
+const DEFAULT_AWARDS = [
+  { order: 1, award: "Longest Win Streak", prize: "10", projectedWinner: "TBD", finalWinner: "TBD" },
+  { order: 2, award: "First Loser", prize: "10", projectedWinner: "TBD", finalWinner: "TBD" },
+  { order: 3, award: "Most Total Points", prize: "10", projectedWinner: "TBD", finalWinner: "TBD" },
+  ...Array.from({ length: 14 }, (_, i) => ({
+    order: 4 + i, award: `Week ${i + 1} Winner`, prize: "5", projectedWinner: "TBD", finalWinner: "TBD"
+  }))
+];
+const DEFAULT_PEOPLE = ["Sam", "Olivia", "Steve", "Ben", "Mark", "Megan", "Brett", "Luke", "John", "Michael"];
+
+async function seedFantasyIfEmpty() {
+  const awardsSnap = await getDocs(awardsCol);
+  if (awardsSnap.empty) { for (const row of DEFAULT_AWARDS) await addDoc(awardsCol, row); }
+  const peopleSnap = await getDocs(peopleCol);
+  if (peopleSnap.empty) { for (const name of DEFAULT_PEOPLE) await addDoc(peopleCol, { name }); }
+}
+seedFantasyIfEmpty();
+
+function renderAwards() {
+  awardsBody.innerHTML = "";
+  currentAwards.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(row.award)}" data-id="${row.id}" data-field="award"></td>
+      <td><input type="text" value="${escapeHtml(row.prize)}" data-id="${row.id}" data-field="prize"></td>
+      <td><input type="text" value="${escapeHtml(row.projectedWinner)}" placeholder="TBD" data-id="${row.id}" data-field="projectedWinner"></td>
+      <td><input type="text" value="${escapeHtml(row.finalWinner)}" placeholder="TBD" data-id="${row.id}" data-field="finalWinner"></td>
+      <td><span class="del-btn" data-id="${row.id}">&#10060;</span></td>
+    `;
+    awardsBody.appendChild(tr);
+  });
+  awardsBody.querySelectorAll("input").forEach(input => {
+    input.addEventListener("change", async (e) => {
+      await updateDoc(doc(db, "fantasyAwards", e.target.getAttribute("data-id")), { [e.target.getAttribute("data-field")]: e.target.value });
+    });
+  });
+  awardsBody.querySelectorAll(".del-btn").forEach(span => {
+    span.addEventListener("click", async (e) => { await deleteDoc(doc(db, "fantasyAwards", e.target.getAttribute("data-id"))); });
+  });
+}
+
+function renderPeople() {
+  peopleBody.innerHTML = "";
+  currentPeople.forEach((person) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(person.name)}" data-id="${person.id}"></td>
+      <td><span class="del-btn" data-id="${person.id}">&#10060;</span></td>
+    `;
+    peopleBody.appendChild(tr);
+  });
+  peopleBody.querySelectorAll("input").forEach(input => {
+    input.addEventListener("change", async (e) => {
+      await updateDoc(doc(db, "fantasyPeople", e.target.getAttribute("data-id")), { name: e.target.value });
+    });
+  });
+  peopleBody.querySelectorAll(".del-btn").forEach(span => {
+    span.addEventListener("click", async (e) => { await deleteDoc(doc(db, "fantasyPeople", e.target.getAttribute("data-id"))); });
+  });
+}
+
+function updateFantasyStatus() {
+  statusFantasy.textContent = `Connected. ${currentAwards.length} award(s), ${currentPeople.length} people.`;
+}
+
+onSnapshot(awardsCol, (snapshot) => {
+  currentAwards = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  currentAwards.sort((a, b) => (a.order || 0) - (b.order || 0));
+  renderAwards(); updateFantasyStatus();
+}, (err) => { statusFantasy.textContent = "Error: " + err.message; });
+
+onSnapshot(peopleCol, (snapshot) => {
+  currentPeople = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderPeople(); updateFantasyStatus();
+}, (err) => { statusFantasy.textContent = "Error: " + err.message; });
+
+window.addAwardRow = async function() {
+  const nextOrder = currentAwards.length ? Math.max(...currentAwards.map(a => a.order || 0)) + 1 : 1;
+  await addDoc(awardsCol, { order: nextOrder, award: "", prize: "", projectedWinner: "TBD", finalWinner: "TBD" });
+};
+window.addPersonRow = async function() { await addDoc(peopleCol, { name: "" }); };
+
+// ================= NFL =================
+const nflGamesCol = collection(db, "nflGames");
+const teamsCol = collection(db, "nflTeams");
+const weekMetaCol = collection(db, "nflWeekMeta");
+const nflGamesBody = document.getElementById("nflGamesBody");
+const teamsBody = document.getElementById("teamsBody");
+const statusNfl = document.getElementById("status-nfl");
+const weekSelect = document.getElementById("weekSelect");
+const byeTeamsInput = document.getElementById("byeTeamsInput");
+
+let allNflGames = [];
+let currentTeams = [];
+let currentWeek = 1;
+
+const DEFAULT_TEAMS = [
+  "Patriots","Bills","Dolphins","Jets","Ravens","Steelers","Bengals","Browns",
+  "Texans","Colts","Titans","Jaguars","Chiefs","Chargers","Broncos","Raiders",
+  "Eagles","Cowboys","Giants","Commanders","Packers","Lions","Bears","Vikings",
+  "Buccaneers","Saints","Panthers","Falcons","Rams","49ers","Seahawks","Cardinals"
+];
+
+async function seedTeamsIfEmpty() {
+  const snap = await getDocs(teamsCol);
+  if (snap.empty) { for (const team of DEFAULT_TEAMS) await addDoc(teamsCol, { team, wins: "0", losses: "0" }); }
+}
+seedTeamsIfEmpty();
+
+function updateNflStatus() {
+  statusNfl.textContent = `Connected. ${allNflGames.length} total game(s), ${currentTeams.length} team(s).`;
+}
+
+function renderNflGamesForWeek() {
+  nflGamesBody.innerHTML = "";
+  const weekGames = allNflGames.filter(g => Number(g.week) === Number(currentWeek));
+  weekGames.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(row.team1)}" data-id="${row.id}" data-field="team1"></td>
+      <td><input type="text" value="${escapeHtml(row.team1WinPct)}" placeholder="e.g. 0.55" data-id="${row.id}" data-field="team1WinPct"></td>
+      <td><input type="text" value="${escapeHtml(row.team2WinPct)}" placeholder="e.g. 0.45" data-id="${row.id}" data-field="team2WinPct"></td>
+      <td><input type="text" value="${escapeHtml(row.team2)}" data-id="${row.id}" data-field="team2"></td>
+      <td><input type="text" value="${escapeHtml(row.gameScore)}" data-id="${row.id}" data-field="gameScore"></td>
+      <td><span class="del-btn" data-id="${row.id}">&#10060;</span></td>
+    `;
+    nflGamesBody.appendChild(tr);
+  });
+  nflGamesBody.querySelectorAll("input").forEach(input => {
+    input.addEventListener("change", async (e) => {
+      await updateDoc(doc(db, "nflGames", e.target.getAttribute("data-id")), { [e.target.getAttribute("data-field")]: e.target.value });
+    });
+  });
+  nflGamesBody.querySelectorAll(".del-btn").forEach(span => {
+    span.addEventListener("click", async (e) => { await deleteDoc(doc(db, "nflGames", e.target.getAttribute("data-id"))); });
+  });
+}
+
+function renderTeams() {
+  teamsBody.innerHTML = "";
+  currentTeams.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(row.team)}" data-id="${row.id}" data-field="team"></td>
+      <td><input type="text" value="${escapeHtml(row.wins)}" data-id="${row.id}" data-field="wins"></td>
+      <td><input type="text" value="${escapeHtml(row.losses)}" data-id="${row.id}" data-field="losses"></td>
+      <td><span class="del-btn" data-id="${row.id}">&#10060;</span></td>
+    `;
+    teamsBody.appendChild(tr);
+  });
+  teamsBody.querySelectorAll("input").forEach(input => {
+    input.addEventListener("change", async (e) => {
+      await updateDoc(doc(db, "nflTeams", e.target.getAttribute("data-id")), { [e.target.getAttribute("data-field")]: e.target.value });
+    });
+  });
+  teamsBody.querySelectorAll(".del-btn").forEach(span => {
+    span.addEventListener("click", async (e) => { await deleteDoc(doc(db, "nflTeams", e.target.getAttribute("data-id"))); });
+  });
+}
+
+async function loadByeTeams() {
+  const snap = await getDocs(weekMetaCol);
+  const match = snap.docs.find(d => Number(d.data().week) === Number(currentWeek));
+  byeTeamsInput.value = match ? (match.data().byeTeams || "") : "";
+}
+
+weekSelect.addEventListener("change", () => {
+  currentWeek = weekSelect.value;
+  renderNflGamesForWeek();
+  loadByeTeams();
+});
+
+byeTeamsInput.addEventListener("change", async () => {
+  const snap = await getDocs(weekMetaCol);
+  const match = snap.docs.find(d => Number(d.data().week) === Number(currentWeek));
+  if (match) {
+    await updateDoc(doc(db, "nflWeekMeta", match.id), { byeTeams: byeTeamsInput.value });
+  } else {
+    await addDoc(weekMetaCol, { week: Number(currentWeek), byeTeams: byeTeamsInput.value });
+  }
+});
+
+onSnapshot(nflGamesCol, (snapshot) => {
+  allNflGames = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderNflGamesForWeek(); updateNflStatus();
+}, (err) => { statusNfl.textContent = "Error: " + err.message; });
+
+onSnapshot(teamsCol, (snapshot) => {
+  currentTeams = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderTeams(); updateNflStatus();
+}, (err) => { statusNfl.textContent = "Error: " + err.message; });
+
+window.addNflGameRow = async function() {
+  await addDoc(nflGamesCol, { week: Number(currentWeek), team1: "", team1WinPct: "", team2WinPct: "", team2: "", gameScore: "" });
+};
+window.addTeamRow = async function() { await addDoc(teamsCol, { team: "", wins: "0", losses: "0" }); };
+
+// ---------- BULK PASTE IMPORT ----------
+function parseTsv(text) {
+  return text.trim().split("\n")
+    .map(line => line.split("\t").map(cell => cell.trim()))
+    .filter(row => row.some(cell => cell !== ""));
+}
+
+window.importPastedGames = async function() {
+  const raw = document.getElementById("pasteGames").value;
+  const statusEl = document.getElementById("pasteGamesStatus");
+  const rows = parseTsv(raw).filter(r => r.length >= 5 && r[0] && r[3]);
+
+  if (rows.length === 0) {
+    statusEl.textContent = "No valid rows found. Make sure you copied 5 columns (Team1, Win%, Win%, Team2, Game Score).";
+    return;
+  }
+
+  statusEl.textContent = "Importing...";
+
+  // Remove existing games for this week first, then add the pasted set
+  const existing = allNflGames.filter(g => Number(g.week) === Number(currentWeek));
+  for (const g of existing) {
+    await deleteDoc(doc(db, "nflGames", g.id));
+  }
+
+  for (const row of rows) {
+    await addDoc(nflGamesCol, {
+      week: Number(currentWeek),
+      team1: row[0], team1WinPct: row[1], team2WinPct: row[2], team2: row[3], gameScore: row[4] || ""
+    });
+  }
+
+  document.getElementById("pasteGames").value = "";
+  statusEl.textContent = `Imported ${rows.length} game(s) for Week ${currentWeek}.`;
+};
+
+window.importPastedTeams = async function() {
+  const raw = document.getElementById("pasteTeams").value;
+  const statusEl = document.getElementById("pasteTeamsStatus");
+  const rows = parseTsv(raw).filter(r => r.length >= 3 && r[0]);
+
+  if (rows.length === 0) {
+    statusEl.textContent = "No valid rows found. Make sure you copied 3 columns (Team, Wins, Losses).";
+    return;
+  }
+
+  statusEl.textContent = "Importing...";
+  let updated = 0, created = 0;
+
+  for (const row of rows) {
+    const [team, wins, losses] = row;
+    const match = currentTeams.find(t => (t.team || "").trim().toLowerCase() === team.trim().toLowerCase());
+    if (match) {
+      await updateDoc(doc(db, "nflTeams", match.id), { wins, losses });
+      updated++;
+    } else {
+      await addDoc(teamsCol, { team, wins, losses });
+      created++;
+    }
+  }
+
+  document.getElementById("pasteTeams").value = "";
+  statusEl.textContent = `Updated ${updated} team(s), created ${created} new.`;
+};
+</script>
+
+</body>
+</html>

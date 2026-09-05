@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NFL Dashboard</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; max-width: 800px; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+  th { background: #eee; }
+  nav { margin-bottom: 15px; }
+  nav a { margin-right: 15px; }
+  #status { color: #666; font-style: italic; }
+  h2 { margin-top: 40px; }
+  .picker { margin: 15px 0; }
+  .picker input, .picker select { width: 160px; }
+  .bye-line { font-style: italic; color: #555; margin-top: 8px; }
+  #teamRecord { font-size: 1.2em; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Games</a>
+  <a href="fantasy.html">Fantasy Awards</a>
+  <a href="predictive-model.html">Predictive Model</a>
+  <a href="admin.html">Admin</a>
+</nav>
+
+<h1>NFL Dashboard</h1>
+<p id="status">Loading...</p>
+
+<h2>Week View</h2>
+<div class="picker">
+  <label for="weekInput">Week:</label>
+  <input type="number" id="weekInput" min="1" max="18" value="1">
+</div>
+
+<table id="gamesTable">
+  <thead>
+    <tr>
+      <th>Team 1</th>
+      <th>Win %</th>
+      <th>Win %</th>
+      <th>Team 2</th>
+      <th>Game Score</th>
+    </tr>
+  </thead>
+  <tbody id="gamesBody"></tbody>
+</table>
+<p class="bye-line" id="byeLine"></p>
+
+<h2>Team View</h2>
+<div class="picker">
+  <label for="teamSelect">Team:</label>
+  <select id="teamSelect"></select>
+</div>
+<p id="teamRecord"></p>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBwT239OARx21tJl29NUXyHi5DBNLGeJjw",
+  authDomain: "game-schedule-d133d.firebaseapp.com",
+  projectId: "game-schedule-d133d",
+  storageBucket: "game-schedule-d133d.firebasestorage.app",
+  messagingSenderId: "918167764058",
+  appId: "1:918167764058:web:5bb07920321b1cfc106c63"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const gamesCol = collection(db, "nflGames");
+const teamsCol = collection(db, "nflTeams");
+const weekMetaCol = collection(db, "nflWeekMeta");
+
+const status = document.getElementById("status");
+const gamesBody = document.getElementById("gamesBody");
+const byeLine = document.getElementById("byeLine");
+const weekInput = document.getElementById("weekInput");
+const teamSelect = document.getElementById("teamSelect");
+const teamRecord = document.getElementById("teamRecord");
+
+let allGames = [];
+let allTeams = [];
+let allWeekMeta = [];
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/"/g, "&quot;");
+}
+
+function formatPct(val) {
+  const num = parseFloat(val);
+  if (isNaN(num)) return "";
+  return (num * 100).toFixed(1) + "%";
+}
+
+function renderWeek() {
+  const week = Number(weekInput.value);
+  gamesBody.innerHTML = "";
+
+  const weekGames = allGames
+    .filter(g => Number(g.week) === week)
+    .sort((a, b) => (parseFloat(b.gameScore) || 0) - (parseFloat(a.gameScore) || 0));
+
+  if (weekGames.length === 0) {
+    gamesBody.innerHTML = '<tr><td colspan="5"><em>No games entered for this week yet.</em></td></tr>';
+  } else {
+    weekGames.forEach(g => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(g.team1)}</td>
+        <td>${formatPct(g.team1WinPct)}</td>
+        <td>${formatPct(g.team2WinPct)}</td>
+        <td>${escapeHtml(g.team2)}</td>
+        <td>${escapeHtml(g.gameScore)}</td>
+      `;
+      gamesBody.appendChild(tr);
+    });
+  }
+
+  const meta = allWeekMeta.find(m => Number(m.week) === week);
+  byeLine.textContent = meta && meta.byeTeams ? `Teams on BYE: ${meta.byeTeams}` : "";
+}
+
+function renderTeamOptions() {
+  const currentVal = teamSelect.value;
+  teamSelect.innerHTML = "";
+  allTeams
+    .map(t => t.team)
+    .filter(Boolean)
+    .sort()
+    .forEach(team => {
+      const opt = document.createElement("option");
+      opt.value = team;
+      opt.textContent = team;
+      teamSelect.appendChild(opt);
+    });
+  if (currentVal) teamSelect.value = currentVal;
+  renderTeamRecord();
+}
+
+function renderTeamRecord() {
+  const selected = teamSelect.value;
+  const match = allTeams.find(t => t.team === selected);
+  if (match) {
+    teamRecord.textContent = `${match.team}: ${match.wins || 0} - ${match.losses || 0}`;
+  } else {
+    teamRecord.textContent = "";
+  }
+}
+
+function updateStatus() {
+  status.textContent = `${allGames.length} game(s) loaded, ${allTeams.length} team(s) loaded.`;
+}
+
+onSnapshot(gamesCol, (snapshot) => {
+  allGames = snapshot.docs.map(d => d.data());
+  renderWeek();
+  updateStatus();
+}, (err) => { status.textContent = "Error: " + err.message; });
+
+onSnapshot(teamsCol, (snapshot) => {
+  allTeams = snapshot.docs.map(d => d.data());
+  renderTeamOptions();
+  updateStatus();
+}, (err) => { status.textContent = "Error: " + err.message; });
+
+onSnapshot(weekMetaCol, (snapshot) => {
+  allWeekMeta = snapshot.docs.map(d => d.data());
+  renderWeek();
+}, (err) => { status.textContent = "Error: " + err.message; });
+
+weekInput.addEventListener("input", renderWeek);
+teamSelect.addEventListener("change", renderTeamRecord);
+</script>
+
+</body>
+</html>
