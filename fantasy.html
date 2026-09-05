@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fantasy Awards</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; max-width: 700px; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+  th { background: #eee; }
+  nav { margin-bottom: 15px; }
+  nav a { margin-right: 15px; }
+  #status { color: #666; font-style: italic; }
+  h2 { margin-top: 40px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Games</a>
+  <a href="admin.html">Games Admin</a>
+  <a href="fantasy.html">Fantasy Awards</a>
+  <a href="fantasy-admin.html">Fantasy Admin</a>
+  <a href="nfl-dashboard.html">NFL Dashboard</a>
+  <a href="nfl-admin.html">NFL Admin</a>
+</nav>
+
+<h1>Fantasy Awards</h1>
+<p id="status">Loading...</p>
+
+<h2>Awards</h2>
+<table id="awardsTable">
+  <thead>
+    <tr>
+      <th>Award</th>
+      <th>Prize</th>
+      <th>Projected Winner</th>
+      <th>Final Winner</th>
+    </tr>
+  </thead>
+  <tbody id="awardsBody"></tbody>
+</table>
+
+<h2>Winnings</h2>
+<table id="winningsTable">
+  <thead>
+    <tr>
+      <th>Person</th>
+      <th>Projected Earnings</th>
+      <th>Final Earnings</th>
+    </tr>
+  </thead>
+  <tbody id="winningsBody"></tbody>
+</table>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBwT239OARx21tJl29NUXyHi5DBNLGeJjw",
+  authDomain: "game-schedule-d133d.firebaseapp.com",
+  projectId: "game-schedule-d133d",
+  storageBucket: "game-schedule-d133d.firebasestorage.app",
+  messagingSenderId: "918167764058",
+  appId: "1:918167764058:web:5bb07920321b1cfc106c63"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const awardsCol = collection(db, "fantasyAwards");
+const peopleCol = collection(db, "fantasyPeople");
+
+const status = document.getElementById("status");
+const awardsBody = document.getElementById("awardsBody");
+const winningsBody = document.getElementById("winningsBody");
+
+let currentAwards = [];
+let currentPeople = [];
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/"/g, "&quot;");
+}
+
+function renderAwards() {
+  awardsBody.innerHTML = "";
+  currentAwards.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(row.award)}</td>
+      <td>$${escapeHtml(row.prize)}</td>
+      <td>${escapeHtml(row.projectedWinner) || "TBD"}</td>
+      <td>${escapeHtml(row.finalWinner) || "TBD"}</td>
+    `;
+    awardsBody.appendChild(tr);
+  });
+}
+
+// Replicates the spreadsheet's SUMIF logic:
+// for each person, add up the prize of every award where the given winner field == that person (case-insensitive, trimmed)
+function sumEarnings(name, winnerField) {
+  return currentAwards.reduce((sum, award) => {
+    const winner = (award[winnerField] || "").trim().toLowerCase();
+    const prizeNum = parseFloat(award.prize) || 0;
+    return winner === name.trim().toLowerCase() ? sum + prizeNum : sum;
+  }, 0);
+}
+
+function renderWinnings() {
+  winningsBody.innerHTML = "";
+  currentPeople.forEach((person) => {
+    const name = person.name || "";
+    const projectedTotal = sumEarnings(name, "projectedWinner");
+    const finalTotal = sumEarnings(name, "finalWinner");
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(name)}</td>
+      <td>$${projectedTotal}</td>
+      <td>$${finalTotal}</td>
+    `;
+    winningsBody.appendChild(tr);
+  });
+}
+
+function updateStatus() {
+  status.textContent = `${currentAwards.length} award(s), ${currentPeople.length} people.`;
+}
+
+onSnapshot(awardsCol, (snapshot) => {
+  currentAwards = snapshot.docs.map(d => d.data());
+  currentAwards.sort((a, b) => (a.order || 0) - (b.order || 0));
+  renderAwards();
+  renderWinnings();
+  updateStatus();
+}, (err) => {
+  status.textContent = "Error connecting to database: " + err.message;
+});
+
+onSnapshot(peopleCol, (snapshot) => {
+  currentPeople = snapshot.docs.map(d => d.data());
+  renderWinnings();
+  updateStatus();
+}, (err) => {
+  status.textContent = "Error connecting to database: " + err.message;
+});
+</script>
+
+</body>
+</html>

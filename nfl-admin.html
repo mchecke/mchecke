@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin - NFL Dashboard</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; max-width: 800px; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+  th { background: #eee; }
+  input[type="text"] { width: 100%; box-sizing: border-box; }
+  .actions { margin-top: 10px; }
+  button { padding: 6px 12px; margin-right: 8px; cursor: pointer; }
+  .del-btn { color: red; cursor: pointer; }
+  nav { margin-bottom: 15px; }
+  nav a { margin-right: 15px; }
+  #status { color: #666; font-style: italic; }
+  h2 { margin-top: 40px; }
+  .week-picker { margin: 15px 0; }
+  .week-picker input { width: 80px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">Games</a>
+  <a href="admin.html">Games Admin</a>
+  <a href="fantasy.html">Fantasy Awards</a>
+  <a href="fantasy-admin.html">Fantasy Admin</a>
+  <a href="nfl-dashboard.html">NFL Dashboard</a>
+  <a href="nfl-admin.html">NFL Admin</a>
+</nav>
+
+<h1>Admin: NFL Dashboard</h1>
+
+<div id="loginSection">
+  <p>Please log in to manage the NFL Dashboard.</p>
+  <input type="email" id="loginEmail" placeholder="Email"><br><br>
+  <input type="password" id="loginPassword" placeholder="Password"><br><br>
+  <button id="loginBtn">Log In</button>
+  <p id="loginError" style="color: red;"></p>
+</div>
+
+<div id="adminSection" style="display: none;">
+  <button id="logoutBtn">Log Out</button>
+  <p id="status">Loading...</p>
+
+  <h2>Weekly Games</h2>
+  <div class="week-picker">
+    <label for="weekSelect">Editing Week:</label>
+    <input type="number" id="weekSelect" min="1" max="18" value="1">
+  </div>
+
+  <label for="byeTeamsInput">Teams on BYE this week (comma separated):</label><br>
+  <input type="text" id="byeTeamsInput" placeholder="e.g. Jets, Giants" style="max-width: 400px;"><br><br>
+
+  <table id="gamesTable">
+    <thead>
+      <tr>
+        <th>Team 1</th>
+        <th>Team 1 Win %</th>
+        <th>Team 2 Win %</th>
+        <th>Team 2</th>
+        <th>Game Score</th>
+        <th>Remove</th>
+      </tr>
+    </thead>
+    <tbody id="gamesBody"></tbody>
+  </table>
+  <div class="actions">
+    <button onclick="addGameRow()">+ Add Game to This Week</button>
+  </div>
+
+  <h2>Team Records</h2>
+  <table id="teamsTable">
+    <thead>
+      <tr>
+        <th>Team</th>
+        <th>Wins</th>
+        <th>Losses</th>
+        <th>Remove</th>
+      </tr>
+    </thead>
+    <tbody id="teamsBody"></tbody>
+  </table>
+  <div class="actions">
+    <button onclick="addTeamRow()">+ Add Team</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs, setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBwT239OARx21tJl29NUXyHi5DBNLGeJjw",
+  authDomain: "game-schedule-d133d.firebaseapp.com",
+  projectId: "game-schedule-d133d",
+  storageBucket: "game-schedule-d133d.firebasestorage.app",
+  messagingSenderId: "918167764058",
+  appId: "1:918167764058:web:5bb07920321b1cfc106c63"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const gamesCol = collection(db, "nflGames");
+const teamsCol = collection(db, "nflTeams");
+const weekMetaCol = collection(db, "nflWeekMeta");
+
+const loginSection = document.getElementById("loginSection");
+const adminSection = document.getElementById("adminSection");
+const loginError = document.getElementById("loginError");
+const status = document.getElementById("status");
+const gamesBody = document.getElementById("gamesBody");
+const teamsBody = document.getElementById("teamsBody");
+const weekSelect = document.getElementById("weekSelect");
+const byeTeamsInput = document.getElementById("byeTeamsInput");
+
+let allGames = [];
+let currentTeams = [];
+let currentWeek = 1;
+
+const DEFAULT_TEAMS = [
+  "Patriots","Bills","Dolphins","Jets","Ravens","Steelers","Bengals","Browns",
+  "Texans","Colts","Titans","Jaguars","Chiefs","Chargers","Broncos","Raiders",
+  "Eagles","Cowboys","Giants","Commanders","Packers","Lions","Bears","Vikings",
+  "Buccaneers","Saints","Panthers","Falcons","Rams","49ers","Seahawks","Cardinals"
+];
+
+async function seedTeamsIfEmpty() {
+  const snap = await getDocs(teamsCol);
+  if (snap.empty) {
+    for (const team of DEFAULT_TEAMS) {
+      await addDoc(teamsCol, { team, wins: "0", losses: "0" });
+    }
+  }
+}
+seedTeamsIfEmpty();
+
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+  loginError.textContent = "";
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    loginError.textContent = "Login failed: " + err.message;
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  loginSection.style.display = user ? "none" : "block";
+  adminSection.style.display = user ? "block" : "none";
+});
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/"/g, "&quot;");
+}
+
+onSnapshot(gamesCol, (snapshot) => {
+  allGames = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderGamesForWeek();
+  updateStatus();
+}, (err) => { status.textContent = "Error: " + err.message; });
+
+onSnapshot(teamsCol, (snapshot) => {
+  currentTeams = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderTeams();
+  updateStatus();
+}, (err) => { status.textContent = "Error: " + err.message; });
+
+function updateStatus() {
+  status.textContent = `Connected. ${allGames.length} total game(s), ${currentTeams.length} team(s).`;
+}
+
+function renderGamesForWeek() {
+  gamesBody.innerHTML = "";
+  const weekGames = allGames.filter(g => Number(g.week) === Number(currentWeek));
+
+  weekGames.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(row.team1)}" data-id="${row.id}" data-field="team1"></td>
+      <td><input type="text" value="${escapeHtml(row.team1WinPct)}" placeholder="e.g. 0.55" data-id="${row.id}" data-field="team1WinPct"></td>
+      <td><input type="text" value="${escapeHtml(row.team2WinPct)}" placeholder="e.g. 0.45" data-id="${row.id}" data-field="team2WinPct"></td>
+      <td><input type="text" value="${escapeHtml(row.team2)}" data-id="${row.id}" data-field="team2"></td>
+      <td><input type="text" value="${escapeHtml(row.gameScore)}" data-id="${row.id}" data-field="gameScore"></td>
+      <td><span class="del-btn" data-id="${row.id}">&#10060;</span></td>
+    `;
+    gamesBody.appendChild(tr);
+  });
+
+  gamesBody.querySelectorAll("input").forEach(input => {
+    input.addEventListener("change", async (e) => {
+      const id = e.target.getAttribute("data-id");
+      const field = e.target.getAttribute("data-field");
+      await updateDoc(doc(db, "nflGames", id), { [field]: e.target.value });
+    });
+  });
+
+  gamesBody.querySelectorAll(".del-btn").forEach(span => {
+    span.addEventListener("click", async (e) => {
+      const id = e.target.getAttribute("data-id");
+      await deleteDoc(doc(db, "nflGames", id));
+    });
+  });
+}
+
+function renderTeams() {
+  teamsBody.innerHTML = "";
+  currentTeams.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" value="${escapeHtml(row.team)}" data-id="${row.id}" data-field="team"></td>
+      <td><input type="text" value="${escapeHtml(row.wins)}" data-id="${row.id}" data-field="wins"></td>
+      <td><input type="text" value="${escapeHtml(row.losses)}" data-id="${row.id}" data-field="losses"></td>
+      <td><span class="del-btn" data-id="${row.id}">&#10060;</span></td>
+    `;
+    teamsBody.appendChild(tr);
+  });
+
+  teamsBody.querySelectorAll("input").forEach(input => {
+    input.addEventListener("change", async (e) => {
+      const id = e.target.getAttribute("data-id");
+      const field = e.target.getAttribute("data-field");
+      await updateDoc(doc(db, "nflTeams", id), { [field]: e.target.value });
+    });
+  });
+
+  teamsBody.querySelectorAll(".del-btn").forEach(span => {
+    span.addEventListener("click", async (e) => {
+      const id = e.target.getAttribute("data-id");
+      await deleteDoc(doc(db, "nflTeams", id));
+    });
+  });
+}
+
+async function loadByeTeams() {
+  const snap = await getDocs(weekMetaCol);
+  const match = snap.docs.find(d => Number(d.data().week) === Number(currentWeek));
+  byeTeamsInput.value = match ? (match.data().byeTeams || "") : "";
+}
+
+weekSelect.addEventListener("change", () => {
+  currentWeek = weekSelect.value;
+  renderGamesForWeek();
+  loadByeTeams();
+});
+
+byeTeamsInput.addEventListener("change", async () => {
+  const snap = await getDocs(weekMetaCol);
+  const match = snap.docs.find(d => Number(d.data().week) === Number(currentWeek));
+  if (match) {
+    await updateDoc(doc(db, "nflWeekMeta", match.id), { byeTeams: byeTeamsInput.value });
+  } else {
+    await addDoc(weekMetaCol, { week: Number(currentWeek), byeTeams: byeTeamsInput.value });
+  }
+});
+
+window.addGameRow = async function() {
+  await addDoc(gamesCol, {
+    week: Number(currentWeek),
+    team1: "", team1WinPct: "", team2WinPct: "", team2: "", gameScore: ""
+  });
+};
+
+window.addTeamRow = async function() {
+  await addDoc(teamsCol, { team: "", wins: "0", losses: "0" });
+};
+
+loadByeTeams();
+</script>
+
+</body>
+</html>
