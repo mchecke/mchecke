@@ -33,8 +33,7 @@
 
 <nav>
   <a href="index.html">Games</a>
-  <a href="fantasy.html">Fantasy Awards</a>
-  <a href="predictive-model.html">Predictive Model</a>
+  <a href="fantasy.html">Checkered Royalty</a>
   <a href="admin.html">Admin</a>
 </nav>
 
@@ -95,56 +94,6 @@
       <button onclick="addPersonRow()">+ Add Person</button>
     </div>
   </div>
-
-  <!-- ================= NFL TAB ================= -->
-  <div id="tab-nfl" class="tab-section">
-    <p id="status-nfl">Loading...</p>
-
-    <h3>Weekly Games</h3>
-    <div class="week-picker">
-      <label for="weekSelect">Editing Week:</label>
-      <input type="number" id="weekSelect" min="1" max="18" value="1">
-    </div>
-
-    <label for="byeTeamsInput">Teams on BYE this week (comma separated):</label><br>
-    <input type="text" id="byeTeamsInput" placeholder="e.g. Jets, Giants" style="max-width: 400px;"><br>
-
-    <div class="paste-box">
-      <strong>Paste from Excel</strong>
-      <p>In your Dashboard sheet, select the 5 columns for this week's games (Team1, Win%, Win%, Team2, Game Score) &mdash; it's fine if blank separator rows are included, they'll be ignored. Copy, then paste below.</p>
-      <textarea id="pasteGames" placeholder="Paste tab-separated rows here..."></textarea><br>
-      <button onclick="importPastedGames()">Import Pasted Games (replaces Week X's games)</button>
-      <p id="pasteGamesStatus"></p>
-    </div>
-
-    <table id="nflGamesTable">
-      <thead>
-        <tr><th>Team 1</th><th>Team 1 Win %</th><th>Team 2 Win %</th><th>Team 2</th><th>Game Score</th><th>Remove</th></tr>
-      </thead>
-      <tbody id="nflGamesBody"></tbody>
-    </table>
-    <div class="actions">
-      <button onclick="addNflGameRow()">+ Add Game to This Week</button>
-    </div>
-
-    <h3>Team Records</h3>
-    <div class="paste-box">
-      <strong>Paste from Excel</strong>
-      <p>In "Dashboard Calc", select the Team, Wins, Losses columns (A69:C100). Copy, then paste below. Matches by team name and updates existing rows.</p>
-      <textarea id="pasteTeams" placeholder="Paste tab-separated rows here..."></textarea><br>
-      <button onclick="importPastedTeams()">Import Pasted Team Records</button>
-      <p id="pasteTeamsStatus"></p>
-    </div>
-
-    <table id="teamsTable">
-      <thead><tr><th>Team</th><th>Wins</th><th>Losses</th><th>Remove</th></tr></thead>
-      <tbody id="teamsBody"></tbody>
-    </table>
-    <div class="actions">
-      <button onclick="addTeamRow()">+ Add Team</button>
-    </div>
-  </div>
-</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
