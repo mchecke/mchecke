@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkered Royalty</title>
+<style>
+  :root { --blue:#1a73e8; --blue-dark:#155ab6; --ink:#172033; --muted:#667085; --line:#d7dce5; --soft:#f5f7fb; --green:#15803d; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; margin:20px; color:var(--ink); background:#fff; }
+  nav { margin-bottom:18px; }
+  nav a { display:inline-block; background:var(--blue); color:#fff; padding:8px 16px; border-radius:6px; margin:0 8px 8px 0; text-decoration:none; font-weight:bold; }
+  nav a:hover { background:var(--blue-dark); }
+  h1 { margin-bottom:8px; } h2 { margin-top:34px; } h3 { margin:0; }
+  table { border-collapse:collapse; width:100%; margin-top:10px; }
+  th,td { border:1px solid var(--line); padding:8px 10px; text-align:left; }
+  th { background:var(--soft); }
+  select { min-width:170px; padding:9px 10px; border:1px solid #aeb6c4; border-radius:6px; background:#fff; font-size:1rem; }
+  .content-width { max-width:1100px; }
+  .inner-tabs { margin:20px 0 24px; border-bottom:2px solid #999; display:flex; flex-wrap:wrap; gap:4px; }
+  .inner-tab-btn { padding:10px 16px; cursor:pointer; border:1px solid #999; border-bottom:none; background:#eee; display:inline-block; }
+  .inner-tab-btn.active { background:#fff; font-weight:bold; color:var(--blue-dark); }
+  .inner-tab-section { display:none; } .inner-tab-section.active { display:block; }
+  .control-row { display:flex; flex-wrap:wrap; gap:16px; align-items:end; margin:0 0 22px; }
+  .control-group { display:flex; flex-direction:column; gap:6px; font-weight:bold; }
+  .status,.empty-state { color:var(--muted); font-style:italic; }
+  .all-time-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:22px; }
+  .table-card,.matchup-card,.stat-card { border:1px solid var(--line); border-radius:10px; background:#fff; overflow:hidden; box-shadow:0 2px 8px rgba(23,32,51,.05); }
+  .table-card { padding:0 14px 14px; } .table-card h2 { margin:18px 0 8px; font-size:1.15rem; }
+  .matchup-list { display:grid; gap:22px; } .matchup-card { padding:18px; }
+  .matchup-title { margin:-18px -18px 16px; padding:9px 18px; background:var(--ink); color:#fff; font-weight:bold; text-align:center; }
+  .matchup-week { color:var(--muted); text-align:center; font-size:.9rem; margin-bottom:12px; }
+  .teams { display:grid; grid-template-columns:1fr auto 1fr; gap:18px; align-items:start; }
+  .versus { align-self:center; font-weight:bold; color:var(--muted); }
+  .fantasy-team { min-width:0; } .fantasy-team.winner { border:2px solid var(--green); border-radius:8px; padding:10px; }
+  .team-heading { text-align:center; margin-bottom:10px; }
+  .team-name { display:block; font-size:1.28rem; font-weight:800; overflow-wrap:anywhere; }
+  .owner-name { display:block; color:var(--muted); margin-top:3px; }
+  .team-score { display:block; font-size:1.65rem; font-weight:800; margin-top:8px; }
+  .winner-label { color:var(--green); font-weight:bold; font-size:.85rem; }
+  .roster-table { font-size:.9rem; } .roster-table th,.roster-table td { padding:6px 7px; }
+  .bench-row { color:var(--muted); background:#fafafa; }
+  .draft-table { max-width:850px; }
+  .dashboard-header { display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; align-items:end; }
+  .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin:22px 0; }
+  .stat-card { padding:16px; } .stat-label { color:var(--muted); font-size:.86rem; }
+  .stat-value { display:block; font-size:1.55rem; font-weight:800; margin-top:5px; }
+  .team-names-list { color:var(--muted); margin:4px 0 0; } .history-table-wrap { overflow-x:auto; }
+  @media (max-width:760px) {
+    body { margin:14px; } .teams { grid-template-columns:1fr; } .versus { text-align:center; }
+    .matchup-card { padding:14px; } .matchup-title { margin:-14px -14px 14px; } .roster-table { font-size:.82rem; }
+  }
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html">Games</a>
+  <a href="fantasy.html">Checkered Royalty</a>
+  <a href="admin.html">Admin</a>
+</nav>
+<main class="content-width">
+  <h1>Checkered Royalty</h1>
+  <div class="inner-tabs" role="tablist" aria-label="Fantasy sections">
+    <button class="inner-tab-btn active" type="button" data-tab="current" role="tab" aria-selected="true">2026-27 Awards</button>
+    <button class="inner-tab-btn" type="button" data-tab="history" role="tab" aria-selected="false">History</button>
+    <button class="inner-tab-btn" type="button" data-tab="dashboard" role="tab" aria-selected="false">Team Dashboard</button>
+  </div>
+
+  <section id="innertab-current" class="inner-tab-section active" role="tabpanel">
+    <p id="status" class="status">Loading...</p>
+    <h2>Awards</h2>
+    <div class="history-table-wrap"><table><thead><tr><th>Award</th><th>Prize</th><th>Projected Winner</th><th>Final Winner</th></tr></thead><tbody id="awardsBody"></tbody></table></div>
+    <h2>Winnings</h2>
+    <div class="history-table-wrap"><table><thead><tr><th>Person</th><th>Projected Earnings</th><th>Final Earnings</th></tr></thead><tbody id="winningsBody"></tbody></table></div>
+  </section>
+
+  <section id="innertab-history" class="inner-tab-section" role="tabpanel">
+    <div class="control-row">
+      <label class="control-group" for="seasonSelect">Season
+        <select id="seasonSelect">
+          <option value="all">All-Time</option><option value="2022">2022-23</option><option value="2023">2023-24</option>
+          <option value="2024">2024-25</option><option value="2025">2025-26</option><option value="2026">2026-27</option>
+        </select>
+      </label>
+      <label class="control-group" id="periodGroup" for="periodSelect" hidden>View
+        <select id="periodSelect">
+          <option value="draft">Draft</option>
+          <option value="week-1">Week 1</option><option value="week-2">Week 2</option><option value="week-3">Week 3</option>
+          <option value="week-4">Week 4</option><option value="week-5">Week 5</option><option value="week-6">Week 6</option>
+          <option value="week-7">Week 7</option><option value="week-8">Week 8</option><option value="week-9">Week 9</option>
+          <option value="week-10">Week 10</option><option value="week-11">Week 11</option><option value="week-12">Week 12</option>
+          <option value="week-13">Week 13</option><option value="week-14">Week 14</option>
+          <option value="playoff-1">Playoff Round 1 (Weeks 15-16)</option>
+          <option value="playoff-2">Playoff Round 2 (Weeks 17-18)</option>
+        </select>
+      </label>
+    </div>
+    <div id="allTimeView" class="all-time-grid">
+      <article class="table-card"><h2>All-Time Records</h2><table><thead><tr><th>Rank</th><th>Name</th><th>Record</th></tr></thead><tbody id="recordsBody"></tbody></table></article>
+      <article class="table-card"><h2>Playoff Berths</h2><table><thead><tr><th>Rank</th><th>Name</th><th>Berths</th></tr></thead><tbody id="berthsBody"></tbody></table></article>
+      <article class="table-card"><h2>Final Standings</h2><table><thead><tr><th>Rank</th><th>Name</th><th>Finishes</th></tr></thead><tbody id="podiumsBody"></tbody></table></article>
+    </div>
+    <div id="seasonHistoryView" hidden>
+      <p id="historyStatus" class="status">Choose a season and view.</p>
+      <div id="seasonHistoryContent"></div>
+    </div>
+  </section>
+
+  <section id="innertab-dashboard" class="inner-tab-section" role="tabpanel">
+    <div class="dashboard-header">
+      <div><h2 style="margin:0">Team Dashboard</h2><p class="team-names-list" id="teamNamesList"></p></div>
+      <label class="control-group" for="ownerSelect">Team owner
+        <select id="ownerSelect"><option value="">Choose an owner</option></select>
+      </label>
+    </div>
+    <div id="dashboardContent"><p class="empty-state">Choose an owner to view their franchise history.</p></div>
+  </section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:"AIzaSyBwT239OARx21tJl29NUXyHi5DBNLGeJjw", authDomain:"game-schedule-d133d.firebaseapp.com",
+  projectId:"game-schedule-d133d", storageBucket:"game-schedule-d133d.firebasestorage.app",
+  messagingSenderId:"918167764058", appId:"1:918167764058:web:5bb07920321b1cfc106c63"
+};
+const db=getFirestore(initializeApp(firebaseConfig));
+const state={awards:[],people:[],owners:[],seasons:[]};
+const $=id=>document.getElementById(id);
+const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm=value=>String(value??"").trim().toLowerCase().replace(/[^a-z0-9]/g,"");
+const score=value=>Number.isFinite(Number(value))?Number(value).toFixed(2):"0.00";
+
+document.querySelectorAll(".inner-tab-btn").forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll(".inner-tab-btn").forEach(b=>{b.classList.remove("active");b.setAttribute("aria-selected","false");});
+  document.querySelectorAll(".inner-tab-section").forEach(s=>s.classList.remove("active"));
+  btn.classList.add("active");btn.setAttribute("aria-selected","true");$("innertab-"+btn.dataset.tab).classList.add("active");
+}));
+
+function renderAwards(){
+  $("awardsBody").innerHTML=state.awards.map(row=>`<tr><td>${esc(row.award)}</td><td>$${esc(row.prize)}</td><td>${esc(row.projectedWinner||"TBD")}</td><td>${esc(row.finalWinner||"TBD")}</td></tr>`).join("");
+}
+function sumEarnings(name,field){return state.awards.reduce((sum,a)=>norm(a[field])===norm(name)?sum+(parseFloat(a.prize)||0):sum,0);}
+function renderWinnings(){
+  $("winningsBody").innerHTML=state.people.map(p=>`<tr><td>${esc(p.name)}</td><td>$${sumEarnings(p.name,"projectedWinner")}</td><td>$${sumEarnings(p.name,"finalWinner")}</td></tr>`).join("");
+}
+function updateAwardsStatus(){$("status").textContent=`${state.awards.length} award(s), ${state.people.length} people.`;}
+function ownerRecord(o){return `${o.wins||0}-${o.losses||0}${Number(o.ties)?`-${o.ties}`:""}`;}
+function medals(o){return "🥇".repeat(Number(o.firsts)||0)+"🥈".repeat(Number(o.seconds)||0)+"🥉".repeat(Number(o.thirds)||0);}
+function winPct(o){const games=(Number(o.wins)||0)+(Number(o.losses)||0)+(Number(o.ties)||0);return games?((Number(o.wins)+(Number(o.ties)||0)/2)/games):0;}
+function renderAllTime(){
+  const records=[...state.owners].sort((a,b)=>winPct(b)-winPct(a)||(Number(b.wins)||0)-(Number(a.wins)||0));
+  const berths=[...state.owners].filter(o=>Number(o.playoffBerths)).sort((a,b)=>(Number(b.playoffBerths)||0)-(Number(a.playoffBerths)||0)||String(a.name).localeCompare(String(b.name)));
+  const podiums=[...state.owners].filter(o=>Number(o.firsts)||Number(o.seconds)||Number(o.thirds)).sort((a,b)=>(Number(b.firsts)||0)-(Number(a.firsts)||0)||(Number(b.seconds)||0)-(Number(a.seconds)||0)||(Number(b.thirds)||0)-(Number(a.thirds)||0));
+  $("recordsBody").innerHTML=records.map((o,i)=>`<tr><td>${i+1}</td><td>${esc(o.name)}</td><td>${ownerRecord(o)}</td></tr>`).join("")||'<tr><td colspan="3" class="empty-state">Add records in Admin.</td></tr>';
+  $("berthsBody").innerHTML=berths.map((o,i)=>`<tr><td>${i+1}</td><td>${esc(o.name)}</td><td>${Number(o.playoffBerths)||0}</td></tr>`).join("")||'<tr><td colspan="3" class="empty-state">Add playoff berths in Admin.</td></tr>';
+  $("podiumsBody").innerHTML=podiums.map((o,i)=>`<tr><td>${i+1}</td><td>${esc(o.name)}</td><td aria-label="${Number(o.firsts)||0} first, ${Number(o.seconds)||0} second, ${Number(o.thirds)||0} third">${medals(o)}</td></tr>`).join("")||'<tr><td colspan="3" class="empty-state">Add podium finishes in Admin.</td></tr>';
+  renderOwnerOptions();
+}
+
+function seasonLabel(year){return `${year}-${String(Number(year)+1).slice(-2)}`;}
+function currentSeason(){return state.seasons.find(s=>Number(s.season)===Number($("seasonSelect").value));}
+function rosterRows(players=[]){
+  if(!players.length)return '<tr><td colspan="3" class="empty-state">Roster unavailable</td></tr>';
+  return players.map(p=>`<tr class="${["BE","IR"].includes(p.slot)?"bench-row":""}"><td>${esc(p.slot||"")}</td><td>${esc(p.name||"Unknown Player")}${p.proTeam?` <small>(${esc(p.proTeam)})</small>`:""}</td><td>${score(p.points)}</td></tr>`).join("");
+}
+function teamPanel(team,winnerKey){
+  if(!team)return '<div class="fantasy-team"><p class="empty-state">Bye</p></div>';
+  const won=winnerKey&&winnerKey===String(team.ownerKey);
+  return `<div class="fantasy-team ${won?"winner":""}"><div class="team-heading"><span class="team-name">${esc(team.teamName||"Unnamed Team")}</span><span class="owner-name">(${esc(displayOwnerName(team))})</span><span class="team-score">${score(team.score)}</span>${won?'<span class="winner-label">WINNER</span>':""}</div><table class="roster-table"><thead><tr><th>Slot</th><th>Player</th><th>Pts</th></tr></thead><tbody>${rosterRows(team.roster)}</tbody></table></div>`;
+}
+function matchupCard(game){
+  const title=game.title?`<div class="matchup-title">${esc(game.title)}</div>`:"";
+  return `<article class="matchup-card">${title}<div class="matchup-week">${esc(game.weekLabel||`Week ${Number(game.week)}`)}</div><div class="teams">${teamPanel(game.away,game.winnerOwnerKey)}<div class="versus">VS</div>${teamPanel(game.home,game.winnerOwnerKey)}</div></article>`;
+}
+function renderDraft(season){
+  const picks=[...(season.draft||[])].sort((a,b)=>(Number(a.overallPick)||0)-(Number(b.overallPick)||0));
+  if(!picks.length)return `<p class="empty-state">No draft results have been imported for ${seasonLabel(season.season)}.</p>`;
+  return `<div class="history-table-wrap"><table class="draft-table"><thead><tr><th>Pick</th><th>Round</th><th>Player</th><th>Team</th><th>Owner</th></tr></thead><tbody>${picks.map(p=>`<tr><td>${Number(p.overallPick)||""}</td><td>${Number(p.round)||""}.${Number(p.roundPick)||""}</td><td>${esc(p.playerName)}</td><td>${esc(p.teamName)}</td><td>${esc(displayOwnerName(p))}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function renderSeasonHistory(){
+  const season=currentSeason(),period=$("periodSelect").value;
+  if(!season){$("historyStatus").textContent="This season has not been imported yet.";$("seasonHistoryContent").innerHTML="";return;}
+  $("historyStatus").textContent=`${seasonLabel(season.season)} · ${season.teams?.length||0} teams · ${season.matchups?.length||0} weekly matchups`;
+  if(period==="draft"){$("seasonHistoryContent").innerHTML=renderDraft(season);return;}
+  let weeks=[];
+  if(period.startsWith("week-"))weeks=[Number(period.split("-")[1])];
+  if(period==="playoff-1")weeks=[15,16];
+  if(period==="playoff-2")weeks=[17,18];
+  let games=(season.matchups||[]).filter(m=>weeks.includes(Number(m.week))&&m.home&&m.away);
+  if(period.startsWith("playoff-"))games=collapsePlayoffGames(games);
+  $("seasonHistoryContent").innerHTML=games.length?`<div class="matchup-list">${games.map(matchupCard).join("")}</div>`:'<p class="empty-state">No matchup data is available for this view.</p>';
+}
+function toggleHistoryView(){
+  const all=$("seasonSelect").value==="all";
+  $("periodGroup").hidden=all;$("allTimeView").hidden=!all;$("seasonHistoryView").hidden=all;
+  if(!all)renderSeasonHistory();
+}
+
+function allTeams(){return state.seasons.flatMap(s=>(s.teams||[]).map(t=>({...t,season:Number(s.season)})));}
+const KNOWN_OWNER_ALIASES={
+  johnchecketts:"johnald007",
+  oliviachecketts:"ESPNFAN0305145958",
+  lukehaslam:"espn38699205",
+  michaelchecketts:"ESPNFAN5158629247",
+  meganroyall:"ESPNFAN0240809100",
+  brettreynolds:"espn04900460",
+  bengoalen:"ESPNFAN0861486534",
+  samchecketts:"SLCheck",
+  stevegoalen:"ESPNFAN9839565224",
+  markroyall:"espnfan0884212119"
+};
+function configuredAlias(owner){return String(owner.espnOwnerId||KNOWN_OWNER_ALIASES[norm(owner.name)]||"");}
+function ownerStatForTeam(team){
+  if(!team)return null;
+  return state.owners.find(o=>configuredAlias(o)&&(
+    configuredAlias(o)===String(team.ownerKey||"")||
+    norm(configuredAlias(o))===norm(team.ownerName)
+  ))||state.owners.find(o=>norm(o.name)===norm(team.ownerName));
+}
+function displayOwnerName(team){
+  return ownerStatForTeam(team)?.name||team?.ownerName||"Unknown Owner";
+}
+function ownerIdentity(team){
+  const owner=ownerStatForTeam(team);
+  return owner?`owner:${owner.id}`:`espn:${team.ownerKey||norm(team.ownerName)}`;
+}
+function findOwnerStat(key,name){
+  if(String(key).startsWith("owner:")){
+    const id=String(key).slice(6),match=state.owners.find(o=>o.id===id);
+    if(match)return match;
+  }
+  return state.owners.find(o=>configuredAlias(o)===String(key)||norm(configuredAlias(o))===norm(name))||state.owners.find(o=>norm(o.name)===norm(name));
+}
+function ownerDirectory(){
+  const map=new Map();
+  state.owners.forEach(o=>{const key=`owner:${o.id}`;map.set(key,{key,name:o.name});});
+  allTeams().forEach(t=>{const key=ownerIdentity(t);if(key&&!map.has(key))map.set(key,{key,name:t.ownerName||"Unknown Owner"});});
+  return [...map.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
+function renderOwnerOptions(){
+  const selected=$("ownerSelect").value;
+  $("ownerSelect").innerHTML='<option value="">Choose an owner</option>'+ownerDirectory().map(o=>`<option value="${esc(o.key)}">${esc(o.name)}</option>`).join("");
+  if([...$("ownerSelect").options].some(o=>o.value===selected))$("ownerSelect").value=selected;
+  if($("ownerSelect").value)renderDashboard();
+}
+function ownerMatch(team,key){
+  return Boolean(team)&&ownerIdentity(team)===String(key);
+}
+function completed(game){return game?.home&&game?.away&&game.winnerOwnerKey;}
+function dashboardGames(key){return state.seasons.flatMap(s=>(s.matchups||[]).map(g=>({...g,season:Number(s.season)}))).filter(g=>completed(g)&&(ownerMatch(g.home,key)||ownerMatch(g.away,key)));}
+function opponentFrom(game,key){return ownerMatch(game.home,key)?game.away:game.home;}
+function selectedTeamFrom(game,key){return ownerMatch(game.home,key)?game.home:game.away;}
+function playoffRound(week){return Number(week)<=16?1:2;}
+function playoffMatchOrder(game){
+  const title=String(game.title||"");
+  if(norm(title)==="championship"||norm(title)==="semifinal")return 0;
+  const place=title.match(/^(\d+)(?:st|nd|rd|th) Place Match$/i);
+  return place?Number(place[1]):999;
+}
+function collapsePlayoffGames(games){
+  const collapsed=new Map();
+  games.forEach(game=>{
+    const pair=[ownerIdentity(game.home),ownerIdentity(game.away)].sort().join("|");
+    const mapKey=`${game.season||""}|${playoffRound(game.week)}|${pair}`;
+    const existing=collapsed.get(mapKey);
+    if(!existing||Number(game.week)>Number(existing.week)){
+      collapsed.set(mapKey,{...game,weekLabel:playoffRound(game.week)===1?"Weeks 15-16":"Weeks 17-18",round:playoffRound(game.week)});
+    }
+  });
+  return [...collapsed.values()].sort((a,b)=>Number(a.round)-Number(b.round)||playoffMatchOrder(a)-playoffMatchOrder(b)||String(a.title||"").localeCompare(String(b.title||"")));
+}
+function isLeaguePlayoffGame(game){
+  const ranks=[Number(game.home?.finalStanding)||0,Number(game.away?.finalStanding)||0];
+  if(Number(game.week)<=14)return false;
+  if(ranks.every(Boolean))return ranks.every(rank=>rank>=1&&rank<=4);
+  return ["semifinal","championship","3rdplacematch"].includes(norm(game.title));
+}
+function gameResult(game,key){
+  const me=selectedTeamFrom(game,key),opp=opponentFrom(game,key);
+  if(Number(me.score)===Number(opp.score))return "T";
+  return String(game.winnerOwnerKey)===String(me.ownerKey)?"W":"L";
+}
+function recordForGames(games,key){
+  const totals={W:0,L:0,T:0};
+  games.forEach(game=>totals[gameResult(game,key)]++);
+  return `${totals.W}-${totals.L}${totals.T?`-${totals.T}`:""}`;
+}
+function matchupHistoryRows(games,key,playoff=false){
+  return games.map(game=>{
+    const me=selectedTeamFrom(game,key),opp=opponentFrom(game,key);
+    const period=playoff?(game.title||`Round ${game.round||playoffRound(game.week)}`):Number(game.week);
+    return `<tr><td>${seasonLabel(game.season)}</td><td>${period}</td><td>${esc(me.teamName)}</td><td>${esc(opp.teamName)}<br><small>(${esc(displayOwnerName(opp))})</small></td><td>${score(me.score)}-${score(opp.score)}</td><td>${gameResult(game,key)}</td></tr>`;
+  }).join("");
+}
+function renderDashboard(){
+  const key=$("ownerSelect").value;
+  if(!key){$("dashboardContent").innerHTML='<p class="empty-state">Choose an owner to view their franchise history.</p>';$("teamNamesList").textContent="";return;}
+  const directory=ownerDirectory().find(o=>o.key===key),teams=allTeams().filter(t=>ownerIdentity(t)===key);
+  const name=directory?.name||teams[0]?.ownerName||"Unknown Owner",stat=findOwnerStat(key,name),games=dashboardGames(key);
+  const regular=games.filter(g=>Number(g.week)<=14);
+  const playoffs=collapsePlayoffGames(games.filter(isLeaguePlayoffGame));
+  const championships=playoffs.filter(g=>norm(g.title)==="championship");
+  const computedWins=regular.filter(g=>gameResult(g,key)==="W").length,computedLosses=regular.filter(g=>gameResult(g,key)==="L").length;
+  const h2h=new Map();
+  regular.forEach(g=>{const opp=opponentFrom(g,key),oppKey=ownerIdentity(opp);if(!h2h.has(oppKey))h2h.set(oppKey,{name:displayOwnerName(opp),w:0,l:0,t:0});const row=h2h.get(oppKey),result=gameResult(g,key);if(result==="T")row.t++;else if(result==="W")row.w++;else row.l++;});
+  const teamNames=[...new Set(teams.sort((a,b)=>a.season-b.season).map(t=>t.teamName).filter(Boolean))];
+  $("teamNamesList").textContent=teamNames.length?`Team names: ${teamNames.join(" · ")}`:"No season team names imported yet.";
+  const record=stat?ownerRecord(stat):`${computedWins}-${computedLosses}`,podium=stat?medals(stat):"—";
+  const sortedRegular=[...regular].sort((a,b)=>b.season-a.season||Number(b.week)-Number(a.week));
+  const sortedPlayoffs=[...playoffs].sort((a,b)=>b.season-a.season||Number(b.round)-Number(a.round));
+  const sortedChampionships=[...championships].sort((a,b)=>b.season-a.season);
+  $("dashboardContent").innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><span class="stat-label">All-Time Record</span><span class="stat-value">${esc(record)}</span></div>
+      <div class="stat-card"><span class="stat-label">Playoff Record</span><span class="stat-value">${recordForGames(playoffs,key)}</span></div>
+      <div class="stat-card"><span class="stat-label">Championship Record</span><span class="stat-value">${recordForGames(championships,key)}</span></div>
+      <div class="stat-card"><span class="stat-label">Playoff Berths</span><span class="stat-value">${Number(stat?.playoffBerths)||0}</span></div>
+      <div class="stat-card"><span class="stat-label">Podium Placements</span><span class="stat-value">${podium||"—"}</span></div>
+      <div class="stat-card"><span class="stat-label">Regular-Season Games</span><span class="stat-value">${regular.length}</span></div>
+    </div>
+    <h2>Regular-Season Record Against Every Owner</h2>
+    <div class="history-table-wrap"><table><thead><tr><th>Opponent</th><th>Record</th><th>Games</th></tr></thead><tbody>${[...h2h.values()].sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<tr><td>${esc(r.name)}</td><td>${r.w}-${r.l}${r.t?`-${r.t}`:""}</td><td>${r.w+r.l+r.t}</td></tr>`).join("")||'<tr><td colspan="3" class="empty-state">Import ESPN history to calculate head-to-head records.</td></tr>'}</tbody></table></div>
+    <h2>Regular-Season Matchup History</h2>
+    <div class="history-table-wrap"><table><thead><tr><th>Season</th><th>Week</th><th>Team</th><th>Opponent</th><th>Score</th><th>Result</th></tr></thead><tbody>${matchupHistoryRows(sortedRegular,key)||'<tr><td colspan="6" class="empty-state">No regular-season matchup history imported yet.</td></tr>'}</tbody></table></div>
+    <h2>Playoff History <small>(${recordForGames(playoffs,key)})</small></h2>
+    <div class="history-table-wrap"><table><thead><tr><th>Season</th><th>Game</th><th>Team</th><th>Opponent</th><th>Combined Score</th><th>Result</th></tr></thead><tbody>${matchupHistoryRows(sortedPlayoffs,key,true)||'<tr><td colspan="6" class="empty-state">No playoff games.</td></tr>'}</tbody></table></div>
+    <h2>Championship History <small>(${recordForGames(championships,key)})</small></h2>
+    <div class="history-table-wrap"><table><thead><tr><th>Season</th><th>Game</th><th>Team</th><th>Opponent</th><th>Combined Score</th><th>Result</th></tr></thead><tbody>${matchupHistoryRows(sortedChampionships,key,true)||'<tr><td colspan="6" class="empty-state">No championship appearances.</td></tr>'}</tbody></table></div>`;
+}
+
+$("seasonSelect").addEventListener("change",toggleHistoryView);
+$("periodSelect").addEventListener("change",renderSeasonHistory);
+$("ownerSelect").addEventListener("change",renderDashboard);
+onSnapshot(collection(db,"fantasyAwards"),snap=>{state.awards=snap.docs.map(d=>d.data()).sort((a,b)=>(a.order||0)-(b.order||0));renderAwards();renderWinnings();updateAwardsStatus();},err=>$("status").textContent="Error connecting to awards: "+err.message);
+onSnapshot(collection(db,"fantasyPeople"),snap=>{state.people=snap.docs.map(d=>d.data());renderWinnings();updateAwardsStatus();},err=>$("status").textContent="Error connecting to people: "+err.message);
+onSnapshot(collection(db,"fantasyOwners"),snap=>{state.owners=snap.docs.map(d=>({id:d.id,...d.data()}));renderAllTime();},err=>$("recordsBody").innerHTML=`<tr><td colspan="3">${esc(err.message)}</td></tr>`);
+onSnapshot(collection(db,"fantasySeasons"),snap=>{state.seasons=snap.docs.map(d=>({id:d.id,...d.data()}));renderSeasonHistory();renderOwnerOptions();},err=>$("historyStatus").textContent="Error loading history: "+err.message);
+toggleHistoryView();
+</script>
+</body>
+</html>
