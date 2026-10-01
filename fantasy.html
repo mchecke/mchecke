@@ -199,7 +199,7 @@ function renderDraft(season){
 function renderSeasonHistory(){
   const season=currentSeason(),period=$("periodSelect").value;
   if(!season){$("historyStatus").textContent="This season has not been imported yet.";$("seasonHistoryContent").innerHTML="";return;}
-  $("historyStatus").textContent=`${seasonLabel(season.season)} · ${season.teams?.length||0} teams · ${season.matchups?.length||0} weekly matchups`;
+  $("historyStatus").textContent=`${seasonLabel(season.season)} · ${season.teams?.length||0} teams · ${(season.matchups?.length||0)/4} weekly matchups`;
   if(period==="draft"){$("seasonHistoryContent").innerHTML=renderDraft(season);return;}
   let weeks=[];
   if(period.startsWith("week-"))weeks=[Number(period.split("-")[1])];
